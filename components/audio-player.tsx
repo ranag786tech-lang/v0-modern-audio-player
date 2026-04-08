@@ -55,119 +55,31 @@ const mockTracks: Track[] = [
 type RepeatMode = 'off' | 'all' | 'one';
 
 export function AudioPlayer() {
-  const audioRef = useRef<HTMLAudioElement>(null);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(mockTracks[0].duration);
   const [volume, setVolume] = useState(100);
-  const [isMuted, setIsMuted] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState<RepeatMode>('off');
-
+  const [repeat, setRepeat] = useState<'off' | 'one' | 'all'>('off');
+  const [isMuted, setIsMuted] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const currentTrack = mockTracks[currentTrackIndex];
-  const duration = mockTracks[currentTrackIndex]?.duration || 0;
-  const progress = duration > 0 ? currentTime / duration : 0;
 
-  // Update audio element playback rate
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.playbackRate = speed;
-    }
-  }, [speed]);
+    const checkDarkMode = () => {
+      if (typeof document !== 'undefined') {
+        setIsDarkMode(document.documentElement.classList.contains('dark'));
+      }
+    };
 
-  // Simulate time progression for demo
-  useEffect(() => {
-    if (!isPlaying) return;
-
-    const interval = setInterval(() => {
-      setCurrentTime((prev) => {
-        const newTime = prev + 0.05;
-        if (newTime >= duration) {
-          if (repeat === 'one') {
-            return 0;
-          } else if (repeat === 'all' || shuffle) {
-            handleNext();
-            return 0;
-          } else {
-            setIsPlaying(false);
-            return duration;
-          }
-        }
-        return newTime;
-      });
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, duration, repeat, shuffle]);
-
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-  };
-
-  const handleNext = () => {
-    if (shuffle) {
-      const randomIndex = Math.floor(Math.random() * mockTracks.length);
-      setCurrentTrackIndex(randomIndex);
-    } else {
-      setCurrentTrackIndex((prev) => (prev + 1) % mockTracks.length);
-    }
-    setCurrentTime(0);
-    setIsPlaying(true);
-  };
-
-  const handlePrevious = () => {
-    if (currentTime > 3) {
-      setCurrentTime(0);
-    } else {
-      setCurrentTrackIndex((prev) => (prev - 1 + mockTracks.length) % mockTracks.length);
-      setCurrentTime(0);
-    }
-    setIsPlaying(true);
-  };
-
-  const handleVolumeChange = (newVolume: number) => {
-    setVolume(newVolume);
-    if (newVolume > 0 && isMuted) {
-      setIsMuted(false);
-    }
-  };
-
-  const handleMute = () => {
-    setIsMuted(!isMuted);
-  };
-
-  const handleShuffle = () => {
-    setShuffle(!shuffle);
-  };
-
-  const handleRepeat = () => {
-    setRepeat((prev) => {
-      if (prev === 'off') return 'all';
-      if (prev === 'all') return 'one';
-      return 'off';
-    });
-  };
-
-  const handleTrackSelect = (index: number) => {
-    setCurrentTrackIndex(index);
-    setCurrentTime(0);
-    setIsPlaying(true);
-  };
-
-  const handleVolumeUp = () => {
-    handleVolumeChange(Math.min(100, volume + 5));
-  };
-
-  const handleVolumeDown = () => {
-    handleVolumeChange(Math.max(0, volume - 5));
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-  };
+    checkDarkMode();
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
 
   useKeyboardShortcuts({
     onPlayPause: handlePlayPause,
@@ -221,8 +133,8 @@ export function AudioPlayer() {
               accent-gradient"
             style={{
               background: `linear-gradient(to right, var(--player-accent) 0%, var(--player-accent) ${progress * 100}%, 
-                ${document.documentElement.classList.contains('dark') ? '#2a2a2a' : '#e5e7eb'} ${progress * 100}%, 
-                ${document.documentElement.classList.contains('dark') ? '#2a2a2a' : '#e5e7eb'} 100%)`,
+                ${isDarkMode ? '#2a2a2a' : '#e5e7eb'} ${progress * 100}%, 
+                ${isDarkMode ? '#2a2a2a' : '#e5e7eb'} 100%)`,
             }}
           />
           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mt-2">
